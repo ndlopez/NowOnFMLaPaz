@@ -8,23 +8,22 @@
 
 myDir=$HOME/.local/share/gnome-shell/extensions/fmLaPaz@moji.physics
 outFile=$myDir/fmLaPaz_now.json
-url=https://icecasthd.net:2199/rpc/lapazfm/streaminfo.get
+url=https://stream.consultoradas.com/cp/get_info.php?p=8042
 
-errFile=$myDir/err.log
-if [ -f $errFile ];then
-	rm $errFile
-fi
+gotData=`/usr/bin/curl -k --silent $url`
 
+   
 getVLC=`/usr/bin/pgrep vlc`
 if [[ $getVLC > 0 ]];then
-	/usr/bin/curl -s $url 2>$errFile 1> $outFile
-	err=`ls -l $errFile | awk -F" " '{print $5;}'`
-	if [[ $err > 0 ]];then
-		#cd $myDir
-		echo "Offline"
-	else
-		/usr/bin/python3.9 $myDir/get_artist.py $outFile
-	fi
+   currSong=$(echo $gotData | cut -f4 -d'"')
+   
+   if [[ ! $? == 0 ]];
+   then
+       echo "Cannot access"
+   else
+       nowListen=$(echo $gotData | cut -f16 -d'"')
+       echo $nowListen,$currSong
+   fi
 else
-	echo "Closed"
+   echo "Closed"
 fi

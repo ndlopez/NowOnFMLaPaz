@@ -38,15 +38,12 @@ function setNowPlaying(){
 	    Main.notify(hora+" Now Playing on FM La Paz",currData[1]);}
 	else{arr.push(song)}
 	//log('This project:'+Me.dir.get_path());
-	log(hora + ' Listening: ' + song);
+	//log(hora + ' Listening: ' + song);
     }    
     else{
 	log(hora+ ' VLC Not playing or some error');
     }
     panelBtnTxt.set_text(arr.join(' '));
-
-    //using JS.Fetch and avoid python/ruby
-    //log('Output from JSON.parse:' + getData(apiURL));
 
     //disp 'private' when running certain app
     //var [ok,out,err,exit] = GLib.spawn_command_line_sync('/bin/bash -c "ifconfig -a | grep wlp0"');
