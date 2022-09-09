@@ -32,7 +32,7 @@ function setNowPlaying(){
     var [ok,out,err,exit] = GLib.spawn_command_line_sync('/bin/bash '+Me.dir.get_path() +'/get_fmLaPaz.sh');
     if (out.length > 0){
 	song = imports.byteArray.toString(out).replace('\n','');
-	if(song.length > 8){//={Offline, Not open}
+	if(song.length > 8){
 	    currData=song.split(",");
 	    arr.push(currData[0]+music);
 	    Main.notify(hora+" Now Playing on FM La Paz",currData[1]);}
@@ -66,7 +66,7 @@ function init(){
 
 function enable(){
     Main.panel._rightBox.insert_child_at_index(panelBtn,1);
-    timeout=Mainloop.timeout_add_seconds(240.0,setNowPlaying);
+    timeout=Mainloop.timeout_add_seconds(237.0,setNowPlaying);
 }
 
 function disable(){

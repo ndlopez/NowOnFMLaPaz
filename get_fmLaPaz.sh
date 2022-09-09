@@ -6,24 +6,21 @@
 #PopArt Mon @ 16:00~17:00, Wed & Thu @ 10:00~11:00, Thu @ 16:00~17:00
 #
 
-myDir=$HOME/.local/share/gnome-shell/extensions/fmLaPaz@moji.physics
-outFile=$myDir/fmLaPaz_now.json
 url=https://stream.consultoradas.com/cp/get_info.php?p=8042
 
 gotData=`/usr/bin/curl -k --silent $url`
 
+#getVLC=`/usr/bin/pgrep vlc`
+#if [[ $getVLC > 0 ]];then
+currSong=$(echo $gotData | cut -f4 -d'"')
    
-getVLC=`/usr/bin/pgrep vlc`
-if [[ $getVLC > 0 ]];then
-   currSong=$(echo $gotData | cut -f4 -d'"')
-   
-   if [[ ! $? == 0 ]];
-   then
-       echo "Cannot access"
-   else
-       nowListen=$(echo $gotData | cut -f16 -d'"')
-       echo $nowListen,$currSong
-   fi
+if [[ ! $? == 0 ]];
+then
+   echo "Cannot access"
 else
-   echo "Closed"
+   nowListen=$(echo $gotData | cut -f16 -d'"')
+   echo $nowListen,$currSong
 fi
+#else
+#   echo "Closed"
+#fi
