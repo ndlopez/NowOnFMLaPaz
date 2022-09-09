@@ -1,0 +1,8 @@
+{
+"name":"LaPaz.fm stat",
+"description":"Get 'current playing' from lapaz.fm",
+"shell-version":["3.30","40.0","42.3"],
+"url":"www.github.com/ndlopez/fmLaPazNow",
+"uuid":"fmLaPaz@moji.physics",
+"version":0.5
+}
