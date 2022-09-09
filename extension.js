@@ -1,124 +1,78 @@
 /*
-  Gnome-Shell Extension
   Display current song from LaPaz.fm
-  Data fetched from icecast.
-  References:
-  [1] https://gitlab.com/justperfection.channel/how-to-create-a-gnome-shell-extension/-/tree/master/example@example.com
-  [2] https://smasue.github.io/gnome-shell-tw
-  Developer: ndlopez (https://github.com/ndlopez)
-  Issue: The extension cannot load due to usage of a deprecated method:
-  obj.actor.add_actor
-  Another issue with the URL, it returns a request response = 6!?
-  Added another URL to test if the JS code is correct, it works. 
-  Thus, fm La Paz URL has some issues, expiry code probably?
-
-  Last updated on 2022-05-17
+  Data from icecast, data wrangled using bash and Python
+  It uses a lot of memory when downloading, and setting.
+  Ref https://gitlab.com/justperfection.channel/how-to-create-a-gnome-shell-extension/-/tree/master/example@example.com
 */
-const {St, GLib, Clutter} = imports.gi;
+const {St,GLib,Clutter} = imports.gi;
+const Gio = imports.gi.Gio;
 const Main = imports.ui.main;
-const Soup = imports.gi.Soup;
-const Lang = imports.lang;
 const Mainloop = imports.mainloop;
-const PanelMenu = imports.ui.panelMenu;
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 
-const LAPAZ = 'https://icecasthd.net:2199/rpc/lapazfm/streaminfo.get';
-const THIRD_ROCK = 'https://feed.tunein.com/profiles/s151799/nowPlaying';
-const ALT_X = 'https://feed.tunein.com/profiles/s293700/nowPlaying'
+let panelBtn, panelBtnTxt, timeout;
+let offset;//Confirm whether its Mon, Tue, to add extra time on <timeout>
 
-const stations = ["FM La Paz","3rd Rock Radio","113.fm Alt-x"];
-const STREAM_URL = [LAPAZ,THIRD_ROCK,ALT_X]
-let _httpSession;
+function setNowPlaying(){
+    var arr = [];
+    var music = String.fromCharCode(9835); //add music symbol
+    var currData=[];
 
-const NowPlaying = new Lang.Class({
-    Name:"NowPlaying",Extends:PanelMenu.Button,
-    _init:function(){
-	    /*let panelBtn = new St.Bin({
-		style_class:"panel-button"
-	    });*/
-        this.parent(0.0,"Now Playing",false);
-        this.labelText = new St.Label({
-            text:_(stations[1]),
-            y_align:Clutter.ActorAlign.CENTER
-        });
-    	//The following builds a button
-	    //let topBox = new St.BoxLayout();
-	    //topBox.add_actor(this.buttonText);
-	    //topBox.add_actor(this.iconText);//create iconText 1st!
-        //this.add_actor(topBox);
-	    //panelBtn.set_child(this.buttonText);
-	    //this.panelBtn.set_child(this.buttonText);
-	this.add_actor(this.labelText);
-        this._refresh();
-    },
-    _refresh:function(){
-        this._loadData(this._refreshUI);
-        this._removeTimeout();
-        this._timeout = Mainloop.timeout_add_seconds(240,Lang.bind(this,this._refresh));
-        return true;
-    },
-    _loadData:function(){
-        _httpSession = new Soup.Session();
-        let msg = Soup.Message.new('GET',STREAM_URL[1]);
-        //log(stations[1] + ", connecting to: " + THIRD_ROCK);
-        msg.connect('got_headers', Lang.bind(this, function(message) {
-            log(stations[1] + " status: " + message.status_code);
-        }));
+    //display whether an app is running
+    /*var [ok,out,err,exit] = GLib.spawn_command_line_sync('pgrep vlc');
+    if (out.length > 0){arr.push('LaPaz'+music);}
+    else{arr.push('Off');}*/
+    
+    //display hour:min using GLib
+    var now = GLib.DateTime.new_now_local();
+    var hora = now.format("%H:%M");//%Y/%m/%d
 
-        _httpSession.queue_message(msg,Lang.bind(this,function(_httpSession,msg){
-            if (msg.status_code !== 200){
-                log(stations[1] + ": Connection error " + msg.status_code );
-                return;}
-            let json = JSON.parse(msg.response_body.data);
-            this._refreshUI(json);
-        }));
-    },
-    _refreshUI:function(data){
-        var musicChar = String.fromCharCode(9835);
-        var now = GLib.DateTime.new_now_local();
-        var hora = now.format("%H:%M ");
-        //let currSong = data['data'][0]['song'];
-        let currSong = data['Header']['Subtitle'];
-        ////if (currSong == 'Ads - Block'){extend updating time}
-        //let listenNow = data['data'][0]['listeners'] + musicChar;
-        var currArtist = currSong.split("-");
-        let listenNow = currArtist[0] + musicChar;
-
-        //log(hora+"Now Playing "+currSong);
-        Main.notify(hora+" Now Playing on "+stations[1],currSong);
-        this.labelText.set_text(listenNow);
-    },
-    _removeTimeout:function(){
-        if(this._timeout){
-            Mainloop.source_remove(this._timeout);
-            this._timeout=null;
-        }
-    },
-    stop:function(){
-        if(_httpSession !== undefined){
-            _httpSession.abort();
-        }
-        _httpSession=undefined;
-        if(this._timeout){
-            Mainloop.source_remove(this._timeout);
-        }
-        this._timeout=undefined;
-        this.menu.removeAll();
+    //display current song
+    var song='';
+    var [ok,out,err,exit] = GLib.spawn_command_line_sync('/bin/bash '+Me.dir.get_path() +'/get_fmLaPaz.sh');
+    if (out.length > 0){
+	song = imports.byteArray.toString(out).replace('\n','');
+	if(song.length > 8){//={Offline, Not open}
+	    currData=song.split(",");
+	    arr.push(currData[0]+music);
+	    Main.notify(hora+" Now Playing on FM La Paz",currData[1]);}
+	else{arr.push(song)}
+	//log('This project:'+Me.dir.get_path());
+	log(hora + ' Listening: ' + song);
+    }    
+    else{
+	log(hora+ ' VLC Not playing or some error');
     }
-});
+    panelBtnTxt.set_text(arr.join(' '));
 
-let nowPlayingMenu;
+    //using JS.Fetch and avoid python/ruby
+    //log('Output from JSON.parse:' + getData(apiURL));
+
+    //disp 'private' when running certain app
+    //var [ok,out,err,exit] = GLib.spawn_command_line_sync('/bin/bash -c "ifconfig -a | grep wlp0"');
+    //if (out.length > 0){arr.push('Private');}
+
+    return true;
+}
 
 function init(){
-    log(stations[1] + ": Application started");
+    panelBtn = new St.Bin({
+	style_class:"panel-button"
+    });
+    panelBtnTxt = new St.Label({
+	style_class:"fmlapazPanel",
+	text:"FM La Paz",
+	y_align: Clutter.ActorAlign.CENTER,
+    });
+    panelBtn.set_child(panelBtnTxt);
 }
 
 function enable(){
-    nowPlayingMenu=new NowPlaying;
-    Main.panel.addToStatusArea('np-indicator',nowPlayingMenu);
+    Main.panel._rightBox.insert_child_at_index(panelBtn,1);
+    timeout=Mainloop.timeout_add_seconds(240.0,setNowPlaying);
 }
 
 function disable(){
-    nowPlayingMenu.stop();
-    nowPlayingMenu.destroy();
+    Mainloop.source_remove(timeout);
+    Main.panel._rightBox.remove_child(panelBtn);
 }
